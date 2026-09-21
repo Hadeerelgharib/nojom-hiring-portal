@@ -1,0 +1,620 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="description" content="Submit and manage hiring requests for Nojom, with department approvals and HR tracking.">
+<title>Hiring Request Portal</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+/* =====================================================================
+   BRAND TOKENS — edit these to match Nojom's official visual identity.
+   The accent below was sampled from the supplied logo (#4659B1).
+   ===================================================================== */
+:root{
+  --font-display:'Manrope',ui-sans-serif,system-ui,sans-serif;
+  --font-body:'Inter',ui-sans-serif,system-ui,sans-serif;
+
+  --ink:#15161a; --ink-soft:#484b57; --muted:#6c6f7c; --faint:#9a9dab;
+  --bg:#f2f3f8; --surface:#ffffff; --surface-2:#f7f8fc;
+  --border:#e3e5ec; --border-strong:#cfd2dd;
+
+  --accent:#4659b1; --accent-deep:#313f8c; --accent-soft:#eaedfa; --accent-ink:#ffffff;
+
+  --success:#1a8a5a; --success-soft:#e3f5ec;
+  --warning:#ac7209; --warning-soft:#fbf0da;
+  --danger:#c13a2e; --danger-soft:#fbeae8;
+
+  --radius:14px; --radius-sm:9px;
+  --shadow-sm:0 1px 2px rgba(20,22,30,.07),0 1px 1px rgba(20,22,30,.04);
+  --shadow-md:0 12px 28px rgba(24,26,38,.12);
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --ink:#edeef4; --ink-soft:#c7c9d8; --muted:#9296a8; --faint:#6d7186;
+    --bg:#101117; --surface:#181a22; --surface-2:#1e2029;
+    --border:#2b2e3a; --border-strong:#3a3e4e;
+    --accent:#8c98e6; --accent-deep:#aeb8f0; --accent-soft:#232a4d; --accent-ink:#12131c;
+    --success:#4dd08c; --success-soft:#15291f;
+    --warning:#e7b24e; --warning-soft:#332911;
+    --danger:#f0776b; --danger-soft:#361a18;
+    --shadow-sm:0 1px 2px rgba(0,0,0,.4);
+    --shadow-md:0 12px 28px rgba(0,0,0,.5);
+  }
+}
+:root[data-theme="dark"]{
+  --ink:#edeef4; --ink-soft:#c7c9d8; --muted:#9296a8; --faint:#6d7186;
+  --bg:#101117; --surface:#181a22; --surface-2:#1e2029;
+  --border:#2b2e3a; --border-strong:#3a3e4e;
+  --accent:#8c98e6; --accent-deep:#aeb8f0; --accent-soft:#232a4d; --accent-ink:#12131c;
+  --success:#4dd08c; --success-soft:#15291f;
+  --warning:#e7b24e; --warning-soft:#332911;
+  --danger:#f0776b; --danger-soft:#361a18;
+  --shadow-sm:0 1px 2px rgba(0,0,0,.4);
+  --shadow-md:0 12px 28px rgba(0,0,0,.5);
+}
+
+*{box-sizing:border-box;}
+body{background:var(--bg);color:var(--ink);font-family:var(--font-body);padding-inline:16px;}
+h1,h2,h3,h4{font-family:var(--font-display);margin:0;text-wrap:balance;}
+p{margin:0;}
+button{font-family:var(--font-body);}
+input,select,textarea{font-family:var(--font-body);color:var(--ink);}
+::selection{background:var(--accent-soft);}
+a{color:var(--accent-deep);}
+.tabular{font-variant-numeric:tabular-nums;}
+
+/* ---------- layout shell ---------- */
+#app{max-width:1120px;margin:0 auto;padding-bottom:64px;}
+.hidden{display:none!important;}
+
+/* ---------- topbar ---------- */
+.topbar{
+  position:sticky; top:env(safe-area-inset-top,0px); z-index:40;
+  margin-inline:-16px; padding:12px 16px; background:color-mix(in srgb, var(--bg) 88%, transparent);
+  backdrop-filter:blur(10px); border-bottom:1px solid var(--border);
+  display:flex; align-items:center; gap:14px; flex-wrap:wrap;
+}
+.brand{display:flex; align-items:center; gap:10px; min-width:0;}
+.logo-badge{
+  background:#fff; border:1px solid var(--border); border-radius:10px; padding:5px 8px;
+  display:flex; align-items:center; box-shadow:var(--shadow-sm); flex:none;
+}
+.logo-badge img{display:block; height:30px; width:auto;}
+.brand-text{display:flex; flex-direction:column; min-width:0;}
+.brand-text strong{font-family:var(--font-display); font-weight:800; font-size:15px; line-height:1.2;}
+.brand-text span{font-size:11.5px; color:var(--muted);}
+.topbar-spacer{flex:1;}
+.tabs{display:flex; gap:4px; background:var(--surface-2); border:1px solid var(--border); border-radius:11px; padding:3px;}
+.tab-btn{
+  border:none; background:transparent; color:var(--muted); font-size:13px; font-weight:600;
+  padding:7px 13px; border-radius:8px; cursor:pointer; white-space:nowrap;
+}
+.tab-btn.active{background:var(--surface); color:var(--accent-deep); box-shadow:var(--shadow-sm);}
+.role-select{
+  border:1px solid var(--border); background:var(--surface); color:var(--ink-soft); font-size:12.5px; font-weight:600;
+  border-radius:9px; padding:7px 10px; cursor:pointer;
+}
+.bell-wrap{position:relative;}
+.bell-btn{
+  border:1px solid var(--border); background:var(--surface); border-radius:9px; width:36px; height:36px;
+  display:flex; align-items:center; justify-content:center; cursor:pointer; position:relative;
+}
+.bell-dot{
+  position:absolute; top:-4px; right:-4px; background:var(--danger); color:#fff; font-size:10px; font-weight:700;
+  min-width:16px; height:16px; border-radius:8px; display:flex; align-items:center; justify-content:center; padding:0 3px;
+  border:2px solid var(--bg);
+}
+.bell-panel{
+  position:absolute; right:0; top:44px; width:300px; max-width:80vw; background:var(--surface); border:1px solid var(--border);
+  border-radius:var(--radius-sm); box-shadow:var(--shadow-md); padding:8px; z-index:60;
+}
+.bell-panel h4{font-size:12.5px; padding:6px 8px; color:var(--muted); text-transform:uppercase; letter-spacing:.04em;}
+.bell-item{display:block; width:100%; text-align:left; border:none; background:transparent; padding:8px; border-radius:8px; cursor:pointer; font-size:13px;}
+.bell-item:hover{background:var(--surface-2);}
+.bell-empty{padding:14px 8px; color:var(--muted); font-size:13px; text-align:center;}
+
+/* ---------- cards / sections ---------- */
+.card{
+  background:var(--surface); border:1px solid var(--border); border-radius:var(--radius);
+  box-shadow:var(--shadow-sm); margin-top:16px; overflow:hidden;
+}
+.card-head{
+  display:flex; align-items:center; gap:10px; padding:16px 20px; border-bottom:1px solid var(--border);
+}
+.card-num{
+  flex:none; width:26px; height:26px; border-radius:8px; background:var(--accent-soft); color:var(--accent-deep);
+  font-family:var(--font-display); font-weight:800; font-size:12.5px; display:flex; align-items:center; justify-content:center;
+}
+.card-head h2{font-size:16px;}
+.card-head p{font-size:12.5px; color:var(--muted); margin-top:2px;}
+.card-body{padding:18px 20px 20px;}
+
+.field-grid{display:grid; grid-template-columns:repeat(2,1fr); gap:14px 16px;}
+.field-grid.cols-3{grid-template-columns:repeat(3,1fr);}
+@media (max-width:640px){ .field-grid, .field-grid.cols-3{grid-template-columns:1fr;} }
+.field{display:flex; flex-direction:column; gap:6px; min-width:0;}
+.field.span-2{grid-column:span 2;}
+@media (max-width:640px){ .field.span-2{grid-column:span 1;} }
+.field label{font-size:12.5px; font-weight:600; color:var(--ink-soft); display:flex; gap:4px; align-items:center;}
+.req-star{color:var(--danger); font-size:12px;}
+.hint{font-size:11.5px; color:var(--muted);}
+.err-msg{font-size:11.5px; color:var(--danger); display:none;}
+.field.has-error .err-msg{display:block;}
+.field.has-error input, .field.has-error select, .field.has-error textarea{border-color:var(--danger)!important; background:var(--danger-soft);}
+
+input[type="text"], input[type="number"], input[type="date"], input[type="datetime-local"], select, textarea{
+  width:100%; border:1px solid var(--border-strong); background:var(--surface); border-radius:var(--radius-sm);
+  padding:9px 11px; font-size:13.5px; color:var(--ink); outline:none; transition:border-color .12s;
+}
+textarea{resize:vertical; min-height:72px; line-height:1.4;}
+input:focus, select:focus, textarea:focus{border-color:var(--accent); box-shadow:0 0 0 3px var(--accent-soft);}
+input:disabled, select:disabled, textarea:disabled{opacity:.6; cursor:not-allowed; background:var(--surface-2);}
+select{appearance:none; background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='6'><path d='M0 0l5 6 5-6z' fill='%236C6F7C'/></svg>"); background-repeat:no-repeat; background-position:right 12px center; padding-right:30px;}
+
+.radio-row, .check-row{display:flex; flex-wrap:wrap; gap:8px;}
+.pill-radio{position:relative;}
+.pill-radio input{position:absolute; opacity:0; inset:0; cursor:pointer;}
+.pill-radio span{
+  display:block; border:1px solid var(--border-strong); border-radius:999px; padding:8px 15px; font-size:13px; font-weight:600;
+  color:var(--ink-soft); background:var(--surface); cursor:pointer; transition:.12s;
+}
+.pill-radio input:checked + span{background:var(--accent); border-color:var(--accent); color:var(--accent-ink);}
+.pill-radio input:focus-visible + span{outline:2px solid var(--accent); outline-offset:2px;}
+
+.big-choice{display:grid; grid-template-columns:1fr 1fr; gap:12px;}
+@media (max-width:560px){ .big-choice{grid-template-columns:1fr;} }
+.big-choice label{
+  border:1.5px solid var(--border-strong); border-radius:var(--radius-sm); padding:14px 16px; cursor:pointer;
+  display:flex; gap:10px; align-items:flex-start; background:var(--surface); transition:.12s;
+}
+.big-choice input{margin-top:3px;}
+.big-choice label:has(input:checked){border-color:var(--accent); background:var(--accent-soft);}
+.big-choice .bc-title{font-weight:700; font-size:13.5px;}
+.big-choice .bc-desc{font-size:12px; color:var(--muted); margin-top:2px;}
+
+.conditional-block{border-left:3px solid var(--accent); background:var(--accent-soft); border-radius:0 var(--radius-sm) var(--radius-sm) 0; padding:14px 16px; margin-top:14px;}
+.conditional-block h4{font-size:13px; margin-bottom:10px; color:var(--accent-deep);}
+
+.dyn-list{display:flex; flex-direction:column; gap:8px;}
+.dyn-row{display:flex; gap:8px; align-items:center;}
+.dyn-row input{flex:1;}
+.btn-icon{
+  flex:none; width:34px; height:34px; border-radius:9px; border:1px solid var(--border-strong); background:var(--surface);
+  color:var(--muted); cursor:pointer; font-size:14px; display:flex; align-items:center; justify-content:center;
+}
+.btn-icon:hover{border-color:var(--danger); color:var(--danger);}
+.btn-add-row{
+  align-self:flex-start; border:1px dashed var(--border-strong); background:transparent; color:var(--accent-deep);
+  font-weight:600; font-size:12.5px; padding:8px 12px; border-radius:var(--radius-sm); cursor:pointer; margin-top:2px;
+}
+.btn-add-row:hover{background:var(--accent-soft);}
+
+/* ---------- buttons ---------- */
+.btn{
+  border-radius:10px; padding:10px 16px; font-size:13.5px; font-weight:700; cursor:pointer; border:1px solid transparent;
+  display:inline-flex; align-items:center; gap:7px; justify-content:center; white-space:nowrap; transition:.12s;
+}
+.btn-primary{background:var(--accent); color:var(--accent-ink);}
+.btn-primary:hover{background:var(--accent-deep);}
+.btn-secondary{background:var(--surface); color:var(--ink-soft); border-color:var(--border-strong);}
+.btn-secondary:hover{border-color:var(--accent);color:var(--accent-deep);}
+.btn-ghost{background:transparent; color:var(--muted); border-color:transparent;}
+.btn-ghost:hover{background:var(--surface-2);}
+.btn-danger{background:var(--danger); color:#fff;}
+.btn-danger:hover{filter:brightness(1.08);}
+.btn-success{background:var(--success); color:#fff;}
+.btn-success:hover{filter:brightness(1.08);}
+.btn:disabled{opacity:.45; cursor:not-allowed;}
+.btn-sm{padding:7px 11px; font-size:12.5px; border-radius:8px;}
+
+/* ---------- sticky action bar ---------- */
+.action-bar{
+  position:sticky; bottom:0; z-index:30; margin-inline:-16px; padding:12px 16px calc(12px + env(safe-area-inset-bottom,0px));
+  background:color-mix(in srgb, var(--bg) 90%, transparent); backdrop-filter:blur(10px); border-top:1px solid var(--border);
+  display:flex; gap:10px; flex-wrap:wrap; margin-top:20px;
+}
+.action-bar .spacer{flex:1;}
+
+/* ---------- signature pad ---------- */
+.sig-wrap{border:1.5px dashed var(--border-strong); border-radius:var(--radius-sm); background:var(--surface-2); position:relative;}
+.sig-canvas{width:100%; height:110px; display:block; touch-action:none; cursor:crosshair;}
+.sig-placeholder{position:absolute; inset:0; display:flex; align-items:center; justify-content:center; color:var(--faint); font-size:12px; pointer-events:none; z-index:1;}
+.sig-canvas{position:relative; z-index:2;}
+.sig-actions{display:flex; justify-content:flex-end; padding-top:6px;}
+
+/* ---------- status pills ---------- */
+.pill{display:inline-flex; align-items:center; gap:5px; font-size:11.5px; font-weight:700; padding:4px 10px; border-radius:999px; white-space:nowrap;}
+.pill::before{content:""; width:6px; height:6px; border-radius:50%; background:currentColor;}
+.pill-draft{background:var(--surface-2); color:var(--muted);}
+.pill-pending_hr, .pill-pending_final{background:var(--warning-soft); color:var(--warning);}
+.pill-approved{background:var(--success-soft); color:var(--success);}
+.pill-rejected{background:var(--danger-soft); color:var(--danger);}
+.pill-critical{background:var(--danger-soft); color:var(--danger);}
+.pill-high{background:var(--warning-soft); color:var(--warning);}
+.pill-medium{background:var(--accent-soft); color:var(--accent-deep);}
+.pill-low{background:var(--surface-2); color:var(--muted);}
+
+/* ---------- requests list ---------- */
+.toolbar{display:flex; gap:10px; flex-wrap:wrap; align-items:center; margin-top:16px;}
+.toolbar input[type="search"]{flex:1; min-width:180px;}
+.toolbar select{width:auto; min-width:130px;}
+.req-grid{display:grid; grid-template-columns:repeat(auto-fill,minmax(280px,1fr)); gap:14px; margin-top:16px;}
+.req-card{
+  background:var(--surface); border:1px solid var(--border); border-radius:var(--radius-sm); padding:15px; cursor:pointer;
+  box-shadow:var(--shadow-sm); display:flex; flex-direction:column; gap:8px; transition:.12s;
+}
+.req-card:hover{border-color:var(--accent); transform:translateY(-1px);}
+.req-card-top{display:flex; justify-content:space-between; gap:8px; align-items:flex-start;}
+.req-card-title{font-weight:700; font-size:14px;}
+.req-card-id{font-size:11px; color:var(--faint); font-family:var(--font-body);}
+.req-card-meta{display:flex; flex-wrap:wrap; gap:6px; font-size:11.5px; color:var(--muted);}
+.req-card-pills{display:flex; gap:6px; flex-wrap:wrap;}
+.empty-state{padding:50px 20px; text-align:center; color:var(--muted);}
+.empty-state h3{color:var(--ink); margin-bottom:6px;}
+
+/* ---------- detail view ---------- */
+.detail-header{display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin-top:14px;}
+.detail-header .grow{flex:1;}
+.summary-grid{display:grid; grid-template-columns:repeat(auto-fit,minmax(160px,1fr)); gap:14px;}
+.summary-item span{display:block; font-size:11px; text-transform:uppercase; letter-spacing:.03em; color:var(--muted); margin-bottom:3px;}
+.summary-item strong{font-size:13.5px;}
+.kv-table{width:100%; border-collapse:collapse; font-size:13px;}
+.kv-table tr{border-bottom:1px solid var(--border);}
+.kv-table tr:last-child{border-bottom:none;}
+.kv-table td{padding:8px 6px; vertical-align:top;}
+.kv-table td:first-child{color:var(--muted); width:38%; font-weight:600; font-size:12.5px;}
+.bullet-list{margin:0; padding-left:18px; font-size:13px; line-height:1.6;}
+.export-row{display:flex; gap:8px; flex-wrap:wrap;}
+
+.approval-step{border:1px solid var(--border); border-radius:var(--radius-sm); padding:14px; margin-bottom:10px;}
+.approval-step-head{display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap;}
+.approval-step-head h4{font-size:13.5px;}
+.approval-meta{font-size:12px; color:var(--muted); margin-top:4px;}
+.approval-sign-panel{margin-top:12px; padding-top:12px; border-top:1px dashed var(--border);}
+.locked-note{font-size:12px; color:var(--faint); display:flex; align-items:center; gap:6px; margin-top:6px;}
+
+.audit-list{display:flex; flex-direction:column; gap:0;}
+.audit-item{display:flex; gap:10px; padding:10px 0; border-bottom:1px solid var(--border);}
+.audit-item:last-child{border-bottom:none;}
+.audit-dot{flex:none; width:8px; height:8px; border-radius:50%; background:var(--accent); margin-top:5px;}
+.audit-text{font-size:13px;}
+.audit-time{font-size:11.5px; color:var(--faint);}
+
+.banner{display:flex; gap:10px; align-items:flex-start; padding:11px 14px; border-radius:var(--radius-sm); font-size:12.5px; margin-top:14px;}
+.banner-info{background:var(--accent-soft); color:var(--accent-deep);}
+.banner-warn{background:var(--warning-soft); color:var(--warning);}
+
+/* ---------- toast ---------- */
+#toast-host{position:fixed; bottom:20px; left:50%; transform:translateX(-50%); z-index:200; display:flex; flex-direction:column; gap:8px; align-items:center; pointer-events:none;}
+.toast{background:var(--ink); color:var(--bg); padding:10px 16px; border-radius:10px; font-size:13px; box-shadow:var(--shadow-md); opacity:0; transform:translateY(8px); transition:.18s;}
+.toast.show{opacity:1; transform:translateY(0);}
+.toast.toast-danger{background:var(--danger);}
+.toast.toast-success{background:var(--success);}
+
+/* ---------- modal ---------- */
+.modal-overlay{position:fixed; inset:0; background:rgba(10,11,16,.5); z-index:150; display:flex; align-items:center; justify-content:center; padding:20px;}
+.modal-box{background:var(--surface); border-radius:var(--radius); max-width:420px; width:100%; box-shadow:var(--shadow-md); padding:20px;}
+.modal-box h3{font-size:15.5px; margin-bottom:8px;}
+.modal-box p{font-size:13.5px; color:var(--ink-soft); line-height:1.5;}
+.modal-actions{display:flex; gap:8px; justify-content:flex-end; margin-top:18px;}
+
+footer.app-footer{margin-top:30px; padding:18px 0 40px; text-align:center; font-size:11.5px; color:var(--faint);}
+
+/* ---------- print ---------- */
+#printArea{display:none;}
+.print-doc{font-family:var(--font-body); color:#15161a;}
+.print-head{display:flex; align-items:center; gap:14px; border-bottom:2px solid #4659b1; padding-bottom:12px; margin-bottom:16px;}
+.print-head img{height:44px;}
+.print-doc h2{font-size:15px; margin:14px 0 6px; color:#31408c;}
+.print-doc table{width:100%; border-collapse:collapse; font-size:11.5px; margin-bottom:6px;}
+.print-doc td{border:1px solid #d9dbe3; padding:5px 7px;}
+.print-doc td:first-child{width:36%; color:#555; font-weight:600;}
+.print-doc ul{margin:4px 0; padding-left:18px; font-size:11.5px;}
+@media print{
+  body *{visibility:hidden;}
+  #printArea, #printArea *{visibility:visible;}
+  #printArea{display:block; position:absolute; top:0; left:0; width:100%; padding:0;}
+  body{padding:0;}
+}
+@media (max-width:420px){
+  .card-head{padding:14px 16px;} .card-body{padding:14px 16px 16px;}
+}
+
+/* ---------- auth area (added for the standalone production app) ---------- */
+.auth-area{display:flex; align-items:center; gap:8px;}
+.auth-chip{display:flex; align-items:center; gap:8px; border:1px solid var(--border); background:var(--surface); border-radius:9px; padding:5px 6px 5px 12px;}
+.auth-chip .who{font-size:12.5px; font-weight:600; color:var(--ink-soft);}
+.auth-chip .role-tag{font-size:10.5px; font-weight:700; text-transform:uppercase; letter-spacing:.03em; color:var(--accent-deep); background:var(--accent-soft); padding:2px 7px; border-radius:999px;}
+.confirm-hero{text-align:center; padding:36px 20px 8px;}
+.confirm-hero .check{width:52px; height:52px; border-radius:50%; background:var(--success-soft); color:var(--success); display:flex; align-items:center; justify-content:center; margin:0 auto 14px; font-size:24px;}
+.confirm-id{font-family:var(--font-display); font-weight:800; font-size:20px; letter-spacing:.02em; color:var(--accent-deep); margin:6px 0 14px;}
+.auth-form-row{display:flex; flex-direction:column; gap:6px; margin-bottom:12px;}
+.auth-form-row label{font-size:12.5px; font-weight:600; color:var(--ink-soft);}
+.auth-error{font-size:12.5px; color:var(--danger); min-height:16px;}
+</style>
+</head>
+<body>
+
+<div id="app">
+
+  <header class="topbar">
+    <div class="brand">
+      <div class="logo-badge"><img id="logo-img" alt="Nojom logo"></div>
+      <div class="brand-text">
+        <strong>Hiring Request Portal</strong>
+        <span>Nojom &middot; Talent Acquisition</span>
+      </div>
+    </div>
+    <div class="topbar-spacer"></div>
+    <nav class="tabs" role="tablist" aria-label="Views">
+      <button class="tab-btn active" id="tab-new" data-view="new">New Request</button>
+      <button class="tab-btn" id="tab-requests" data-view="requests">Requests &amp; Approvals</button>
+    </nav>
+    <div id="auth-area" class="auth-area">
+      <button class="btn btn-secondary btn-sm" id="btn-sign-in">Sign in</button>
+    </div>
+    <div class="bell-wrap">
+      <button class="bell-btn" id="bell-btn" aria-label="Notifications">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 8a6 6 0 1 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+        <span class="bell-dot hidden" id="bell-dot">0</span>
+      </button>
+      <div class="bell-panel hidden" id="bell-panel"></div>
+    </div>
+  </header>
+
+  <!-- ============================== NEW REQUEST VIEW ============================== -->
+  <section id="view-new">
+
+    <div class="banner banner-info" id="draft-banner" style="display:none;">
+      <span>&#9998;</span>
+      <div><strong>Editing a saved draft.</strong> Your changes are only stored once you click "Save Draft" or "Submit Request".</div>
+    </div>
+
+    <div class="banner banner-info hidden" id="resume-draft-banner">
+      <span>&#128190;</span>
+      <div style="flex:1;"><strong>You have a draft in progress on this device.</strong> Pick up where you left off, or start a new request below.</div>
+      <button class="btn btn-secondary btn-sm" id="btn-resume-draft" style="flex:none;">Continue draft</button>
+    </div>
+
+    <div id="view-confirm" class="hidden"></div>
+
+    <!-- 1. Position Information -->
+    <div class="card">
+      <div class="card-head"><div class="card-num">1</div><div><h2>Position Information</h2><p>Core details about the role being requested.</p></div></div>
+      <div class="card-body">
+        <div class="field-grid">
+          <div class="field"><label for="f-jobTitle">Job Title / Position Name <span class="req-star">*</span></label>
+            <input type="text" id="f-jobTitle" placeholder="e.g. Senior Backend Engineer"><span class="err-msg">Please enter the job title.</span></div>
+          <div class="field"><label for="f-department">Department <span class="req-star">*</span></label>
+            <select id="f-department">
+              <option value="">Select department…</option>
+              <option>Technology</option><option>Sales</option><option>Marketing</option><option>Finance</option>
+              <option>Operations</option><option>Human Resources</option><option>Customer Support</option>
+              <option>Legal</option><option>Product</option><option>Other</option>
+            </select><span class="err-msg">Please select a department.</span></div>
+          <div class="field hidden" id="wrap-departmentOther"><label for="f-departmentOther">Specify department</label>
+            <input type="text" id="f-departmentOther" placeholder="Department name"></div>
+          <div class="field"><label for="f-jobGrade">Job Grade <span class="req-star">*</span></label>
+            <input type="text" id="f-jobGrade" placeholder="e.g. G6 / Senior"><span class="err-msg">Please enter the job grade.</span></div>
+          <div class="field"><label for="f-reportingTo">Reporting To / Direct Manager <span class="req-star">*</span></label>
+            <input type="text" id="f-reportingTo" placeholder="Manager's name and title"><span class="err-msg">Please enter the reporting manager.</span></div>
+          <div class="field span-2"><label>Employment Type <span class="req-star">*</span></label>
+            <div class="radio-row" id="f-employmentType">
+              <label class="pill-radio"><input type="radio" name="employmentType" value="Full-Time" checked><span>Full-Time</span></label>
+              <label class="pill-radio"><input type="radio" name="employmentType" value="Part-Time"><span>Part-Time</span></label>
+              <label class="pill-radio"><input type="radio" name="employmentType" value="Contract"><span>Contract</span></label>
+              <label class="pill-radio"><input type="radio" name="employmentType" value="Temporary"><span>Temporary</span></label>
+            </div></div>
+          <div class="field"><label for="f-workMode">Work Location Type <span class="req-star">*</span></label>
+            <select id="f-workMode"><option>On-site</option><option>Hybrid</option><option>Remote</option></select></div>
+          <div class="field"><label for="f-workLocation">Work Location (City / Office) <span class="req-star">*</span></label>
+            <input type="text" id="f-workLocation" placeholder="e.g. Cairo HQ"><span class="err-msg">Please enter the work location.</span></div>
+          <div class="field"><label for="f-numPositions">Number of Positions Required <span class="req-star">*</span></label>
+            <input type="number" id="f-numPositions" min="1" step="1" value="1"><span class="err-msg">Enter at least 1 position.</span></div>
+        </div>
+
+        <div class="field" style="margin-top:16px;"><label>Hiring Request Type <span class="req-star">*</span></label>
+          <div class="big-choice" id="f-requestType">
+            <label><input type="radio" name="requestType" value="new" checked>
+              <div><div class="bc-title">New Position</div><div class="bc-desc">A newly created role that does not currently exist on the team.</div></div></label>
+            <label><input type="radio" name="requestType" value="replacement">
+              <div><div class="bc-title">Replacement</div><div class="bc-desc">Backfilling a role vacated by a departing or transferring employee.</div></div></label>
+          </div>
+        </div>
+
+        <div class="conditional-block hidden" id="block-replacement">
+          <h4>Replacement Details</h4>
+          <div class="field-grid">
+            <div class="field"><label for="f-replacementName">Name of Employee Being Replaced <span class="req-star">*</span></label>
+              <input type="text" id="f-replacementName"><span class="err-msg">Please enter the employee's name.</span></div>
+            <div class="field"><label for="f-replacementReason">Reason for Replacement <span class="req-star">*</span></label>
+              <select id="f-replacementReason">
+                <option value="">Select reason…</option>
+                <option>Resignation</option><option>Termination</option><option>Retirement</option>
+                <option>Internal Transfer / Promotion</option><option>End of Contract</option><option>Other</option>
+              </select><span class="err-msg">Please select a reason.</span></div>
+            <div class="field hidden" id="wrap-replacementReasonOther"><label for="f-replacementReasonOther">Specify reason</label>
+              <input type="text" id="f-replacementReasonOther"></div>
+            <div class="field"><label for="f-lastWorkingDay">Expected Last Working Day <span class="req-star">*</span></label>
+              <input type="date" id="f-lastWorkingDay"><span class="err-msg">Please choose a date.</span></div>
+          </div>
+        </div>
+
+        <div class="conditional-block hidden" id="block-newposition">
+          <h4>New Position Justification</h4>
+          <div class="field"><label for="f-newPosJustification">Business Justification / Reason for Creating this Position <span class="req-star">*</span></label>
+            <textarea id="f-newPosJustification" placeholder="Explain the business need — growth, workload, new function, strategic initiative…"></textarea>
+            <span class="err-msg">Please provide a business justification.</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 2. Job Requirements -->
+    <div class="card">
+      <div class="card-head"><div class="card-num">2</div><div><h2>Job Requirements</h2><p>What the successful candidate will do and need — add as many lines as required.</p></div></div>
+      <div class="card-body">
+        <div class="field">
+          <label>Key Responsibilities <span class="req-star">*</span></label>
+          <div class="dyn-list" id="list-responsibilities"></div>
+          <button type="button" class="btn-add-row" data-add="responsibilities">+ Add responsibility</button>
+          <span class="err-msg" id="err-responsibilities">Please add at least one responsibility.</span>
+        </div>
+        <div class="field" style="margin-top:16px;">
+          <label>Required Qualifications <span class="req-star">*</span></label>
+          <div class="dyn-list" id="list-qualifications"></div>
+          <button type="button" class="btn-add-row" data-add="qualifications">+ Add qualification</button>
+          <span class="err-msg" id="err-qualifications">Please add at least one qualification.</span>
+        </div>
+        <div class="field" style="margin-top:16px;">
+          <label for="f-otherRequirements">Any Other Important Requirements</label>
+          <textarea id="f-otherRequirements" placeholder="Languages, certifications, tools, travel requirements…"></textarea>
+        </div>
+      </div>
+    </div>
+
+    <!-- 3. Timeline & priority -->
+    <div class="card">
+      <div class="card-head"><div class="card-num">3</div><div><h2>Hiring Timeline &amp; Priority</h2><p>Help HR plan sourcing effort and urgency.</p></div></div>
+      <div class="card-body">
+        <div class="field-grid">
+          <div class="field"><label for="f-submissionDate">Hiring Request Submission Date <span class="req-star">*</span></label>
+            <input type="date" id="f-submissionDate"></div>
+          <div class="field"><label for="f-timeToFillValue">Expected Time to Fill <span class="req-star">*</span></label>
+            <div style="display:flex; gap:8px;">
+              <input type="number" id="f-timeToFillValue" min="1" step="1" value="4" style="flex:1;">
+              <select id="f-timeToFillUnit" style="flex:1;"><option>Weeks</option><option>Days</option><option>Months</option></select>
+            </div><span class="err-msg" id="err-timeToFill">Enter a value greater than 0.</span></div>
+          <div class="field span-2"><label>Hiring Priority <span class="req-star">*</span></label>
+            <div class="radio-row" id="f-priority">
+              <label class="pill-radio"><input type="radio" name="priority" value="Critical"><span>Critical</span></label>
+              <label class="pill-radio"><input type="radio" name="priority" value="High" checked><span>High</span></label>
+              <label class="pill-radio"><input type="radio" name="priority" value="Medium"><span>Medium</span></label>
+              <label class="pill-radio"><input type="radio" name="priority" value="Low"><span>Low</span></label>
+            </div></div>
+          <div class="field span-2"><label for="f-businessImpact">Business Impact if Not Filled on Time <span class="req-star">*</span></label>
+            <textarea id="f-businessImpact" placeholder="e.g. Delayed product roadmap, team overload, missed client SLAs…"></textarea>
+            <span class="err-msg">Please describe the business impact.</span></div>
+          <div class="field span-2"><label for="f-urgencyReason">Reason for Urgency <span class="hint">(if applicable)</span></label>
+            <textarea id="f-urgencyReason" placeholder="Optional — explain any time-sensitive drivers"></textarea></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 4. Budget -->
+    <div class="card">
+      <div class="card-head"><div class="card-num">4</div><div><h2>Budget &amp; Compensation</h2><p>Financial parameters for approval and offer-making.</p></div></div>
+      <div class="card-body">
+        <div class="field-grid cols-3">
+          <div class="field"><label for="f-currency">Currency <span class="req-star">*</span></label>
+            <select id="f-currency"><option>EGP</option><option>USD</option><option>EUR</option><option>SAR</option><option>AED</option><option>GBP</option></select></div>
+          <div class="field"><label for="f-approvedBudget">Approved / Planned Budget <span class="req-star">*</span></label>
+            <input type="number" id="f-approvedBudget" min="0" placeholder="Total annual cost"><span class="err-msg">Please enter the planned budget.</span></div>
+          <div class="field"></div>
+          <div class="field"><label for="f-salaryMin">Salary Range — From <span class="req-star">*</span></label>
+            <input type="number" id="f-salaryMin" min="0"><span class="err-msg">Enter a minimum salary.</span></div>
+          <div class="field"><label for="f-salaryMax">Salary Range — To <span class="req-star">*</span></label>
+            <input type="number" id="f-salaryMax" min="0"><span class="err-msg" id="err-salaryMax">Enter a maximum ≥ minimum.</span></div>
+          <div class="field"></div>
+        </div>
+        <div class="field" style="margin-top:14px;"><label for="f-benefits">Benefits / Allowances <span class="hint">(if applicable)</span></label>
+          <textarea id="f-benefits" placeholder="Transport, mobile, medical, housing, bonus structure…"></textarea></div>
+        <div class="field" style="margin-top:14px;"><label>Is this position included in the approved manpower budget? <span class="req-star">*</span></label>
+          <div class="radio-row" id="f-inBudget">
+            <label class="pill-radio"><input type="radio" name="inBudget" value="Yes" checked><span>Yes</span></label>
+            <label class="pill-radio"><input type="radio" name="inBudget" value="No"><span>No</span></label>
+            <label class="pill-radio"><input type="radio" name="inBudget" value="Pending Approval"><span>Pending Approval</span></label>
+          </div></div>
+        <div class="conditional-block hidden" id="block-budgetJustification">
+          <div class="field"><label for="f-budgetJustification">Justification / Additional Approval Details <span class="req-star">*</span></label>
+            <textarea id="f-budgetJustification" placeholder="Explain the budget gap and who is being asked to approve it"></textarea>
+            <span class="err-msg">This field is required when the position is outside the approved budget.</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 5. Approvals -->
+    <div class="card">
+      <div class="card-head"><div class="card-num">5</div><div><h2>Approvals &amp; Signatures</h2><p>Your sign-off starts the workflow. HR and Final Management sign after you submit.</p></div></div>
+      <div class="card-body">
+        <div class="field-grid">
+          <div class="field"><label for="f-rmName">Requesting Manager — Full Name <span class="req-star">*</span></label>
+            <input type="text" id="f-rmName"><span class="err-msg">Please enter your name.</span></div>
+          <div class="field"><label>Date</label><input type="text" id="f-rmDateDisplay" disabled value=""></div>
+        </div>
+        <div class="field" style="margin-top:10px;">
+          <label>Signature <span class="req-star">*</span></label>
+          <div class="sig-wrap"><canvas class="sig-canvas" id="sig-rm"></canvas><div class="sig-placeholder" id="sig-rm-placeholder">Sign here with mouse or finger</div></div>
+          <div class="sig-actions"><button type="button" class="btn btn-ghost btn-sm" data-clear-sig="rm">Clear signature</button></div>
+          <span class="err-msg" id="err-sig-rm">Please sign to confirm this request.</span>
+        </div>
+        <div class="banner banner-info" style="margin-top:16px;">
+          <span>&#9432;</span>
+          <div>Once submitted, this request moves to the <strong>HR Manager</strong> for review, then to <strong>Final Management</strong> for approval. You'll be able to track status under "Requests &amp; Approvals".</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="action-bar">
+      <button class="btn btn-secondary" id="btn-cancel">Cancel</button>
+      <button class="btn btn-secondary" id="btn-reset">Reset / Clear</button>
+      <div class="spacer"></div>
+      <button class="btn btn-secondary" id="btn-save-draft">Save Draft</button>
+      <button class="btn btn-primary" id="btn-submit">Submit Request</button>
+    </div>
+  </section>
+
+  <!-- ============================== REQUESTS / APPROVALS VIEW ============================== -->
+  <section id="view-requests" class="hidden">
+
+    <div id="requests-signin-gate" class="hidden">
+      <div class="card"><div class="card-body" style="text-align:center; padding:48px 20px;">
+        <h2 style="font-size:17px; margin-bottom:8px;">Sign in to review hiring requests</h2>
+        <p class="hint" style="max-width:420px; margin:0 auto 18px;">Browsing requests and recording HR Manager, Final Approval, or HR Admin decisions requires an approver account. Submitting a new request does not.</p>
+        <button class="btn btn-primary" id="btn-sign-in-gate">Sign in</button>
+      </div></div>
+    </div>
+    <div id="requests-list-pane">
+      <div class="banner banner-info hidden" id="requests-auth-note">
+        <span>&#128274;</span>
+        <div>Signed in as <strong id="requests-auth-name"></strong>. Only the approval actions your role is authorized for are enabled below.</div>
+      </div>
+      <div class="toolbar">
+        <input type="search" id="filter-search" placeholder="Search by title, ID, or department…">
+        <select id="filter-status">
+          <option value="">All statuses</option>
+          <option value="draft">Draft</option>
+          <option value="pending_hr">Pending HR Review</option>
+          <option value="pending_final">Pending Final Approval</option>
+          <option value="approved">Approved</option>
+          <option value="rejected">Rejected</option>
+        </select>
+        <select id="filter-priority">
+          <option value="">All priorities</option>
+          <option>Critical</option><option>High</option><option>Medium</option><option>Low</option>
+        </select>
+        <button class="btn btn-primary btn-sm" id="btn-new-from-list">+ New Request</button>
+      </div>
+      <div class="req-grid" id="req-grid"></div>
+    </div>
+
+    <div id="requests-detail-pane" class="hidden"></div>
+  </section>
+
+  <footer class="app-footer">Nojom Hiring Request Portal &middot; Internal HR tool</footer>
+</div>
+
+<div id="printArea"></div>
+<div id="toast-host"></div>
+<div id="modal-host"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+<script src="config.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
