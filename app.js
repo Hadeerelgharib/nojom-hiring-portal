@@ -142,6 +142,7 @@ let sb = null;
 let configured = false;
 let session = null;
 let myProfile = null; // { id, full_name, role, roles: string[] } or null
+let passwordRecoveryMode = false; // true while the user is on a Supabase password-recovery session
 
 function initSupabase() {
   configured = !!(window.supabase && SUPABASE_CONFIG.url && SUPABASE_CONFIG.anonKey &&
@@ -151,6 +152,7 @@ function initSupabase() {
 }
 
 async function refreshAuthState() {
+  if (passwordRecoveryMode) return; // don't render the normal app while a new password is pending
   if (!configured) { myProfile = null; renderAuthArea(); return; }
   const { data } = await sb.auth.getSession();
   session = data.session || null;
@@ -206,6 +208,64 @@ function renderAuthArea() {
   $("requests-signin-gate").classList.toggle("hidden", !!myProfile);
   $("requests-list-pane").classList.toggle("hidden", !myProfile);
   if (!myProfile) $("requests-detail-pane").classList.add("hidden");
+}
+
+/* ===================================================================== */
+/* Password recovery mode                                                */
+/* Reached when the user follows a Supabase "reset password" email link. */
+/* Supabase's client detects the recovery tokens in the URL and fires an */
+/* auth event named "PASSWORD_RECOVERY" (wired up in init(), below). We  */
+/* show a dedicated, non-dismissable "set a new password" screen instead */
+/* of letting the user fall through to the normal signed-in app.         */
+/* ===================================================================== */
+function enterPasswordRecoveryMode() {
+  passwordRecoveryMode = true;
+  renderPasswordRecoveryScreen();
+}
+
+function renderPasswordRecoveryScreen() {
+  const host = $("modal-host");
+  host.innerHTML =
+    '<div class="modal-overlay" id="recovery-overlay"><div class="modal-box" role="dialog" aria-modal="true">' +
+    "<h3>Set a new password</h3>" +
+    '<p>You followed a password reset link. Choose a new password for your account to continue.</p>' +
+    '<div class="auth-form-row"><label for="recovery-password">New password</label><input type="password" id="recovery-password" autocomplete="new-password"></div>' +
+    '<div class="auth-form-row"><label for="recovery-password-confirm">Confirm new password</label><input type="password" id="recovery-password-confirm" autocomplete="new-password"></div>' +
+    '<div class="auth-error" id="recovery-error"></div>' +
+    '<div class="modal-actions">' +
+    '<button class="btn btn-primary" id="btn-do-recovery">Update password</button>' +
+    "</div></div></div>";
+  // Deliberately no overlay-click-to-close and no Cancel button here —
+  // unlike openSignInModal/openModal, this screen must not be dismissable
+  // until a new password is actually set.
+  const submit = async () => {
+    const pw = $("recovery-password").value;
+    const pw2 = $("recovery-password-confirm").value;
+    const errEl = $("recovery-error");
+    errEl.textContent = "";
+    if (!pw || pw.length < 6) { errEl.textContent = "Password must be at least 6 characters."; return; }
+    if (pw !== pw2) { errEl.textContent = "Passwords do not match."; return; }
+    const btn = $("btn-do-recovery");
+    btn.disabled = true; btn.textContent = "Updating…";
+    const { error } = await sb.auth.updateUser({ password: pw });
+    btn.disabled = false; btn.textContent = "Update password";
+    if (error) { errEl.textContent = error.message || "Could not update password."; return; }
+    await exitPasswordRecoveryMode();
+    toast("Password updated — you're signed in.", "success");
+  };
+  $("btn-do-recovery").addEventListener("click", submit);
+  $("recovery-password-confirm").addEventListener("keydown", (e) => { if (e.key === "Enter") submit(); });
+}
+
+async function exitPasswordRecoveryMode() {
+  passwordRecoveryMode = false;
+  $("modal-host").innerHTML = "";
+  // Strip the recovery tokens out of the URL so they don't linger in the
+  // address bar or browser history once they've been consumed.
+  if (window.history && window.history.replaceState) {
+    window.history.replaceState(null, "", window.location.pathname + window.location.search);
+  }
+  await refreshAuthState();
 }
 
 /* ===================================================================== */
@@ -1489,7 +1549,10 @@ async function init() {
     banner.innerHTML = "<span>&#9888;</span><div><strong>Not connected yet.</strong> Add your Supabase project URL and anon key to config.js, then reload this page. See README.md.</div>";
     $("view-new").insertBefore(banner, $("view-new").firstChild);
   } else {
-    sb.auth.onAuthStateChange(() => { refreshAuthState(); });
+    sb.auth.onAuthStateChange((event) => {
+      if (event === "PASSWORD_RECOVERY") { enterPasswordRecoveryMode(); return; }
+      refreshAuthState();
+    });
     subscribeRealtime();
   }
 
